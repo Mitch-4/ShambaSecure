@@ -1,0 +1,175 @@
+body {
+  margin: 0;
+  font-family: "Poppins", sans-serif;
+  background: linear-gradient(135deg, #40aa5d, #177717);
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+.login-card {
+  background: white;
+  border-radius: 20px;
+  padding: 40px;
+  width: 350px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+  text-align: center;
+  color: #228b22;
+}
+
+.logo {
+  width: 200px;
+  margin-bottom: 15px;
+}
+
+.login-card h1 {
+  margin-bottom: 10px;
+  font-size: 1.8rem;
+  color: #a6ea5d;
+}
+
+.login-card p {
+  font-size: 0.9rem;
+  margin-bottom: 25px;
+  color: #a6ea5d;
+}
+
+.login-card input {
+  width: 100%;
+  padding: 10px;
+  margin: 8px 0;
+  border: 1px ssolid #90ee90;
+  border-radius: 8px;
+  outline: none;
+}
+
+.login-card button {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+  border: none;
+  border-radius: 8px;
+  background-color: #228b22;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.login-card button:hover {
+  background-color: #1b5e20;
+}
+
+
+/* ===== Modern Dashboard Styling ===== */
+.dashboard {
+  padding: 40px 60px;
+  background: linear-gradient(135deg, #f8fff9, #ecf3ff);
+  height: 100vh;
+  font-family: "Poppins", sans-serif;
+  overflow-y: auto;
+}
+
+/* --- Header Section --- */
+.dashboard-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 40px;
+}
+
+.dashboard-title {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.dashboard-logo {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  object-fit: contain;
+}
+
+.dashboard h1 {
+  color: #1b5e20;
+  font-size: 2rem;
+  margin: 0;
+}
+
+.dashboard p {
+  color: #444;
+  margin-top: 5px;
+}
+
+/* --- Sensor Cards --- */
+.sensor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 25px;
+  margin-bottom: 50px;
+}
+
+.sensor-card {
+  border-radius: 16px;
+  padding: 30px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 1.1rem;
+  background: white;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+}
+
+.sensor-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+}
+
+.sensor-card span {
+  display: block;
+  font-size: 1.6rem;
+  margin-top: 5px;
+}
+
+/* Different color accents */
+.humidity {
+  border-top: 5px solid #1e88e5;
+  color: #1565c0;
+  background: #e3f2fd;
+}
+
+.soil {
+  border-top: 5px solid #2e7d32;
+  color: #1b5e20;
+  background: #e8f5e9;
+}
+
+.temperature {
+  border-top: 5px solid #c62828;
+  color: #b71c1c;
+  background: #ffebee;
+}
+
+/* --- Chart Section --- */
+.chart-section {
+  background: white;
+  border-radius: 16px;
+  padding: 30px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+}
+
+.chart-section h2 {
+  color: #1b5e20;
+  margin-bottom: 20px;
+}
+
