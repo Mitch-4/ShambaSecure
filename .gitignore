@@ -42,3 +42,7 @@ test-results/
 temp/
 
 backend/src/config/firebaseServiceAccount.json
+
+# Firebase Admin SDK keys and credentials
+ .~lock.shamba-5333b-firebase-adminsdk-fbsvc-27ff7f5b0f.json#
+
