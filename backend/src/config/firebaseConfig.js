@@ -1,44 +1,56 @@
 // src/config/firebaseConfig.js
 import admin from "firebase-admin";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 
-// Load environment variables
-dotenv.config();
+dotenv.config(); // Load .env variables
 
-// Initialize Firebase Admin SDK
+// Diagnostic log — ensure .env variables are loaded
+if (!process.env.FIREBASE_PRIVATE_KEY) {
+  console.error("❌ Missing FIREBASE_PRIVATE_KEY in .env");
+} else {
+  console.log(
+    "✅ FIREBASE_PRIVATE_KEY loaded (length):",
+    process.env.FIREBASE_PRIVATE_KEY.length
+  );
+}
+
+// Construct service account object from environment variables
 const serviceAccount = {
-  type: "service_account",
+  type: process.env.FIREBASE_TYPE,
   project_id: process.env.FIREBASE_PROJECT_ID,
   private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
-  private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+  // 🔥 Fix: Convert escaped `\n` into actual newlines
+  private_key: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
   client_email: process.env.FIREBASE_CLIENT_EMAIL,
   client_id: process.env.FIREBASE_CLIENT_ID,
-  auth_uri: "https://accounts.google.com/o/oauth2/auth",
-  token_uri: "https://oauth2.googleapis.com/token",
-  auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
+  auth_uri: process.env.FIREBASE_AUTH_URI,
+  token_uri: process.env.FIREBASE_TOKEN_URI,
+  auth_provider_x509_cert_url: process.env.FIREBASE_AUTH_PROVIDER_X509_CERT_URL,
+  client_x509_cert_url: process.env.FIREBASE_CLIENT_X509_CERT_URL,
+  universe_domain: process.env.FIREBASE_UNIVERSE_DOMAIN,
 };
 
-// Validate environment variables
-if (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_PRIVATE_KEY || !process.env.FIREBASE_CLIENT_EMAIL) {
-  console.error("❌ Missing Firebase environment variables!");
-  console.error("Required: FIREBASE_PROJECT_ID, FIREBASE_PRIVATE_KEY, FIREBASE_CLIENT_EMAIL");
-  process.exit(1);
-}
+// Get file path info for logging
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 try {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    projectId: process.env.FIREBASE_PROJECT_ID,
-  });
-  console.log("✅ Firebase Admin initialized successfully");
+  // Initialize Firebase Admin SDK once
+  if (!admin.apps.length) {
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+    console.log("✅ Firebase Admin initialized successfully!");
+  } else {
+    console.log("ℹ️ Firebase Admin already initialized.");
+  }
 } catch (error) {
-  console.error("❌ Firebase Admin initialization error:", error.message);
-  console.error("Full error:", error);
-  process.exit(1); // Exit if Firebase fails to initialize
+  console.error("❌ Firebase Admin initialization error:", error);
 }
 
-const auth = admin.auth();
-const db = admin.firestore();
-
-export { admin, auth, db };
+// ✅ Export the services you need elsewhere
+export const auth = admin.auth();
+export const db = admin.firestore();
 export default admin;

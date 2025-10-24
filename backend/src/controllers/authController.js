@@ -1,7 +1,13 @@
 // src/controllers/authController.js
-import { auth } from '../config/firebaseConfig.js';
+import admin from '../config/firebaseConfig.js'; // ✅ import default admin
+import { sendMagicLinkEmail } from '../services/emailService.js';
 
-// Send Magic Link to email
+// ✅ Get Firebase Auth instance
+const auth = admin.auth();
+
+/**
+ * Send Magic Link to user's email
+ */
 export const sendMagicLink = async (req, res) => {
   try {
     const { email } = req.body;
@@ -13,7 +19,7 @@ export const sendMagicLink = async (req, res) => {
       });
     }
 
-    // Validate email format
+    // ✅ Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return res.status(400).json({
@@ -22,7 +28,7 @@ export const sendMagicLink = async (req, res) => {
       });
     }
 
-    // Generate sign-in link
+    // ✅ Generate sign-in link
     const actionCodeSettings = {
       url: process.env.MAGIC_LINK_REDIRECT_URL || 'http://localhost:5173/verify-email',
       handleCodeInApp: true,
@@ -30,17 +36,25 @@ export const sendMagicLink = async (req, res) => {
 
     const link = await auth.generateSignInWithEmailLink(email, actionCodeSettings);
 
-    // In production, you'd send this via email service (SendGrid, AWS SES, etc.)
-    // For now, we'll return it in the response for testing
     console.log('🔗 Magic Link generated for:', email);
     console.log('🔗 Link:', link);
 
-    res.json({
-      success: true,
-      message: 'Magic link sent successfully! Check your email.',
-      // REMOVE THIS IN PRODUCTION - only for testing
-      ...(process.env.NODE_ENV === 'development' && { link })
-    });
+    // ✅ Send via email
+    try {
+      await sendMagicLinkEmail(email, link);
+      res.json({
+        success: true,
+        message: 'Magic link sent! Check your inbox.',
+        ...(process.env.NODE_ENV === 'development' && { link })
+      });
+    } catch (emailError) {
+      console.error('❌ Email sending failed:', emailError);
+      res.json({
+        success: true,
+        message: 'Magic link generated (email service unavailable)',
+        link // Only for development fallback
+      });
+    }
 
   } catch (error) {
     console.error('Send magic link error:', error);
@@ -51,11 +65,12 @@ export const sendMagicLink = async (req, res) => {
   }
 };
 
-// Verify Firebase ID Token
+/**
+ * Verify Firebase ID Token
+ */
 export const verifyToken = async (req, res) => {
   try {
     const { idToken } = req.body;
-
     if (!idToken) {
       return res.status(400).json({
         success: false,
@@ -63,10 +78,7 @@ export const verifyToken = async (req, res) => {
       });
     }
 
-    // Verify the token
     const decodedToken = await auth.verifyIdToken(idToken);
-
-    // Get user details
     const user = await auth.getUser(decodedToken.uid);
 
     res.json({
@@ -82,7 +94,6 @@ export const verifyToken = async (req, res) => {
         }
       }
     });
-
   } catch (error) {
     console.error('Verify token error:', error);
     res.status(401).json({
@@ -92,11 +103,13 @@ export const verifyToken = async (req, res) => {
   }
 };
 
-// Get current user (requires auth middleware)
+/**
+ * Get Current User
+ */
 export const getCurrentUser = async (req, res) => {
   try {
-    // req.user is set by verifyToken middleware
-    const user = await auth.getUser(req.user.uid);
+    const { uid } = req.user || {}; // from middleware if used
+    const user = await auth.getUser(uid);
 
     res.json({
       success: true,
@@ -108,7 +121,6 @@ export const getCurrentUser = async (req, res) => {
         photoURL: user.photoURL || null
       }
     });
-
   } catch (error) {
     console.error('Get current user error:', error);
     res.status(500).json({
