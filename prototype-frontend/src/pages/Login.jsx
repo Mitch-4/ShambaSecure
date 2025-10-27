@@ -193,7 +193,7 @@ const Login = () => {
           fontSize: '12px',
           color: '#004085'
         }}>
-          <strong>💡 How it works:</strong><br />
+          <strong> How it works:</strong><br />
           Enter your email and we'll send you a secure link. Click the link to sign in instantly - no password needed!
         </div>
 
