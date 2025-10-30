@@ -9,15 +9,32 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
-  
-  // ✅ FIXED: Correct backend URL
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+  const [fadeOut, setFadeOut] = useState(false);
 
-  // Pre-fill email if redirected from registration
+  // ✅ Use HTTPS backend by default
+  const backendUrl =
+    import.meta.env.VITE_BACKEND_URL || "https://localhost:5000";
+
+  // ✅ Prefill email if redirected from registration
   useEffect(() => {
     if (location.state?.email) setEmail(location.state.email);
     if (location.state?.message) setMessage(`✅ ${location.state.message}`);
   }, [location]);
+
+  // ✅ Auto-hide messages after 5 seconds (with fade-out)
+  useEffect(() => {
+    if (message) {
+      const fadeTimer = setTimeout(() => setFadeOut(true), 4000);
+      const clearTimer = setTimeout(() => {
+        setMessage("");
+        setFadeOut(false);
+      }, 5000);
+      return () => {
+        clearTimeout(fadeTimer);
+        clearTimeout(clearTimer);
+      };
+    }
+  }, [message]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -37,44 +54,44 @@ const Login = () => {
     setMessage("");
 
     try {
-      // ✅ FIXED: Step 1 - Check if email is registered (with /api prefix)
+      // ✅ Step 1: Check if email is registered
       const checkRes = await fetch(`${backendUrl}/api/auth/check-email`, {
         method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
 
       const checkData = await checkRes.json();
-      
+
       if (!checkData.success) {
-        setMessage(checkData.error || "❌ Email not registered. Please register first.");
+        setMessage(
+          checkData.error ||
+            "❌ Email not registered. Please register first."
+        );
         setLoading(false);
         return;
       }
 
-      // ✅ FIXED: Step 2 - Request magic link (with /api prefix)
+      // ✅ Step 2: Send magic link
       const res = await fetch(`${backendUrl}/api/auth/send-magic-link`, {
         method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
 
       const data = await res.json();
 
       if (data.requiresDeviceVerification) {
-        // New device detected - user needs to verify via email
-        setMessage("⚠️ New device detected! Please check your email to verify this device before logging in.");
+        setMessage(
+          "⚠️ New device detected! Please check your email to verify this device."
+        );
       } else if (data.success) {
-        // Magic link sent successfully
         setMessage("✅ Magic link sent! Check your email (and spam folder).");
       } else {
         setMessage(data.error || "❌ Failed to send magic link. Please try again.");
       }
 
+      // ✅ Clear email field immediately after sending
       setEmail("");
     } catch (error) {
       console.error("❌ Error:", error);
@@ -154,6 +171,7 @@ const Login = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Enter your registered email"
+              autoComplete="on"
               style={{
                 width: "100%",
                 padding: "10px",
@@ -193,13 +211,29 @@ const Login = () => {
           <p
             style={{
               textAlign: "center",
-              color: message.startsWith("✅") ? "#28a745" : message.startsWith("⚠️") ? "#ff9800" : "#d9534f",
+              color: message.startsWith("✅")
+                ? "#28a745"
+                : message.startsWith("⚠️")
+                ? "#ff9800"
+                : "#d9534f",
               marginTop: "20px",
               fontSize: "14px",
               padding: "10px",
-              backgroundColor: message.startsWith("✅") ? "#d4edda" : message.startsWith("⚠️") ? "#fff3cd" : "#f8d7da",
+              backgroundColor: message.startsWith("✅")
+                ? "#d4edda"
+                : message.startsWith("⚠️")
+                ? "#fff3cd"
+                : "#f8d7da",
               borderRadius: "5px",
-              border: `1px solid ${message.startsWith("✅") ? "#c3e6cb" : message.startsWith("⚠️") ? "#ffeaa7" : "#f5c6cb"}`,
+              border: `1px solid ${
+                message.startsWith("✅")
+                  ? "#c3e6cb"
+                  : message.startsWith("⚠️")
+                  ? "#ffeaa7"
+                  : "#f5c6cb"
+              }`,
+              opacity: fadeOut ? 0 : 1,
+              transition: "opacity 1s ease-out",
             }}
           >
             {message}
@@ -227,7 +261,14 @@ const Login = () => {
           </Link>
         </p>
 
-        <div style={{ marginTop: "20px", textAlign: "center", fontSize: "12px", color: "#999" }}>
+        <div
+          style={{
+            marginTop: "20px",
+            textAlign: "center",
+            fontSize: "12px",
+            color: "#999",
+          }}
+        >
           <p>🔒 Secure passwordless authentication</p>
         </div>
       </div>
