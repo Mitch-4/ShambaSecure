@@ -1,14 +1,40 @@
+# -------------------------
+# Python / Flask backend
+# -------------------------
 venv/
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+*.log
 .Python
 .env
-firebase_credentials.json
-*.log
-.DS_Store
-.vscode/
-.idea/
 *.swp
 *.swo
+
+# Local credentials or secrets
+firebase_credentials.json
+.~lock.*
+*.zip
+
+# -------------------------
+# Node / React frontend
+# -------------------------
+node_modules/
+dist/
+build/
+*.map
+
+# -------------------------
+# Editor / System files
+# -------------------------
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# -------------------------
+# Temporary or backup files
+# -------------------------
+*.bak
+*.tmp

@@ -1,5 +1,5 @@
-# routes/auth_routes.py - Enhanced with Device Verification
-from flask import Blueprint, request, jsonify
+# routes/auth_routes.py - Enhanced with Device Verification + HTTPS Support
+from flask import Blueprint, request, jsonify, redirect
 import secrets
 import time
 from datetime import datetime, timedelta
@@ -13,9 +13,8 @@ from services.email_service import (
     send_magic_link_email,
     send_registration_verification_email,
     send_new_device_alert_email,
-    send_device_verification_email  # ✅ add this line
+    send_device_verification_email
 )
-
 
 import os
 import re
@@ -29,6 +28,16 @@ login_tokens = {}
 device_verification_tokens = {}
 TOKEN_EXPIRY_MINUTES = 15
 DEVICE_VERIFICATION_EXPIRY_MINUTES = 30
+
+# ✅ HTTPS Enforcement (set to True in production)
+ENFORCE_HTTPS = os.getenv('ENFORCE_HTTPS', 'False').lower() == 'true'
+
+def enforce_https():
+    """Redirect HTTP to HTTPS if enforcement is enabled"""
+    if ENFORCE_HTTPS and request.scheme == 'http':
+        url = request.url.replace('http://', 'https://', 1)
+        return redirect(url, code=301)
+    return None
 
 def get_device_fingerprint(request):
     """Generate device fingerprint from user agent and IP"""
@@ -138,6 +147,11 @@ def cleanup_expired_tokens():
 @auth_bp.route('/send-magic-link', methods=['POST'])
 def send_magic_link():
     """Send magic link with device verification"""
+    # Check HTTPS enforcement
+    https_redirect = enforce_https()
+    if https_redirect:
+        return https_redirect
+    
     try:
         data = request.get_json()
         email = data.get('email')
@@ -257,12 +271,21 @@ def send_magic_link():
         }), 500
 
 
-@auth_bp.route('/verify-device', methods=['POST'])
+@auth_bp.route('/verify-device', methods=['GET', 'POST'])  # ✅ Accept both GET and POST
 def verify_device():
     """Verify new device and send magic link"""
+    # Check HTTPS enforcement
+    https_redirect = enforce_https()
+    if https_redirect:
+        return https_redirect
+    
     try:
-        data = request.get_json()
-        token = data.get('token')
+        # ✅ Get token from either POST body or GET query params
+        if request.method == 'POST':
+            data = request.get_json()
+            token = data.get('token') if data else None
+        else:  # GET request from email link
+            token = request.args.get('token')
         
         if not token:
             return jsonify({
@@ -335,12 +358,21 @@ def verify_device():
         }), 500
 
 
-@auth_bp.route('/verify-token', methods=['POST'])
+@auth_bp.route('/verify-token', methods=['GET', 'POST'])  # ✅ Accept both GET and POST
 def verify_token():
     """Verify magic link token and return Firebase custom token"""
+    # Check HTTPS enforcement
+    https_redirect = enforce_https()
+    if https_redirect:
+        return https_redirect
+    
     try:
-        data = request.get_json()
-        token = data.get('token')
+        # ✅ Get token from either POST body or GET query params
+        if request.method == 'POST':
+            data = request.get_json()
+            token = data.get('token') if data else None
+        else:  # GET request from email link
+            token = request.args.get('token')
         
         if not token:
             return jsonify({
@@ -428,6 +460,11 @@ def verify_token():
 @auth_bp.route('/trusted-devices', methods=['GET'])
 def get_trusted_devices():
     """Get list of trusted devices for current user"""
+    # Check HTTPS enforcement
+    https_redirect = enforce_https()
+    if https_redirect:
+        return https_redirect
+    
     try:
         # Get user from authorization header
         auth_header = request.headers.get('Authorization')
@@ -475,6 +512,11 @@ def get_trusted_devices():
 @auth_bp.route('/remove-device', methods=['POST'])
 def remove_device():
     """Remove a trusted device"""
+    # Check HTTPS enforcement
+    https_redirect = enforce_https()
+    if https_redirect:
+        return https_redirect
+    
     try:
         data = request.get_json()
         uid = data.get('uid')
@@ -521,6 +563,11 @@ def remove_device():
 @auth_bp.route('/check-email', methods=['POST'])
 def check_email():
     """Check if email is registered"""
+    # Check HTTPS enforcement
+    https_redirect = enforce_https()
+    if https_redirect:
+        return https_redirect
+    
     try:
         data = request.get_json()
         email = data.get('email')

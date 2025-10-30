@@ -1,70 +1,64 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { signInWithCustomToken } from "firebase/auth";
-import { auth } from "../firebaseConfig";
 import axios from "axios";
 
-export default function VerifyMagicLink() {
-  const [message, setMessage] = useState("Verifying your login...");
+export default function VerifyDevice() {
+  const [message, setMessage] = useState("Verifying your device...");
   const [isError, setIsError] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
-    const verifyToken = async () => {
+    const verifyDevice = async () => {
       const params = new URLSearchParams(location.search);
       const token = params.get("token");
 
       if (!token) {
-        setMessage("❌ Invalid or missing login token.");
+        setMessage("❌ Invalid or missing verification token.");
         setIsError(true);
         return;
       }
 
       try {
+        // ✅ Use POST method with token in body (matches backend)
         const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://127.0.0.1:5000";
         
-        // ✅ Verify token with backend
         const response = await axios.post(
-          `${backendUrl}/api/auth/verify-token`,
-          { token },
+          `${backendUrl}/api/auth/verify-device`,
+          { token }, // Send token in request body
           {
             headers: { "Content-Type": "application/json" }
           }
         );
 
         if (response.data.success) {
-          const { customToken, user } = response.data;
-          
-          // ✅ Sign in to Firebase with custom token
-          await signInWithCustomToken(auth, customToken);
-          
-          // ✅ Store user data in localStorage
-          localStorage.setItem("user", JSON.stringify(user));
-          
-          setMessage("✅ Login successful! Redirecting to dashboard...");
+          setMessage("✅ Device verified! Magic link sent to your email. Please check your inbox.");
           setIsError(false);
           
-          // Redirect to dashboard
+          // Redirect to login after 3 seconds
           setTimeout(() => {
-            navigate("/dashboard");
-          }, 1500);
+            navigate("/login", { 
+              state: { 
+                message: "Device verified! Check your email for the magic link to sign in." 
+              } 
+            });
+          }, 3000);
         }
       } catch (err) {
         console.error("Verification error:", err);
         
-        const errorMessage = err.response?.data?.error || "Invalid or expired link. Please request a new one.";
+        const errorMessage = err.response?.data?.error || "Verification failed or link expired.";
         setMessage(`❌ ${errorMessage}`);
         setIsError(true);
         
-        // Redirect to login after 5 seconds
+        // Redirect to login after 5 seconds on error
         setTimeout(() => {
           navigate("/login");
         }, 5000);
       }
     };
 
-    verifyToken();
+    verifyDevice();
   }, [location, navigate]);
 
   return (
@@ -125,7 +119,7 @@ export default function VerifyMagicLink() {
             marginBottom: "10px",
           }}
         >
-          Magic Link Verification
+          Device Verification
         </h2>
 
         <p
@@ -155,7 +149,7 @@ export default function VerifyMagicLink() {
             onMouseEnter={(e) => (e.target.style.backgroundColor = "#45a049")}
             onMouseLeave={(e) => (e.target.style.backgroundColor = "#4CAF50")}
           >
-            Request New Link
+            Back to Login
           </button>
         )}
       </div>
