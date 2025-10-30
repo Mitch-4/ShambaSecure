@@ -1,7 +1,5 @@
 import { Routes, Route } from "react-router-dom";
 import { useState } from "react";
-import { sendSignInLinkToEmail } from "firebase/auth";
-import { auth } from "./firebaseConfig";
 import Dashboard from "./pages/Dashboard";
 import VerifyMagicLink from "./pages/VerifyMagicLink";
 import Register from "./pages/Register";
@@ -13,6 +11,8 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://127.0.0.1:5000";
+
   const handleMagicLink = async (e) => {
     e.preventDefault();
     const email = e.target.email.value;
@@ -22,32 +22,52 @@ function App() {
       return;
     }
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setMessage("❌ Please enter a valid email address");
+      return;
+    }
+
     setLoading(true);
     setMessage("");
 
     try {
-      const actionCodeSettings = {
-        // This is where Firebase will redirect the user after clicking the link
-        url: "http://localhost:5173/auth/verify-device",
-        handleCodeInApp: true,
-      };
+      // Check if email is registered via backend
+      const checkRes = await fetch(`${backendUrl}/api/auth/check-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
 
-      await sendSignInLinkToEmail(auth, email, actionCodeSettings);
-      window.localStorage.setItem("emailForSignIn", email);
-      setMessage("✅ Magic link sent! Check your email (and spam folder).");
+      const checkData = await checkRes.json();
+
+      if (!checkData.success) {
+        setMessage(checkData.error || "❌ Email not registered. Please register first.");
+        setLoading(false);
+        return;
+      }
+
+      // Send magic link via backend
+      const res = await fetch(`${backendUrl}/api/auth/send-magic-link`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await res.json();
+
+      if (data.requiresDeviceVerification) {
+        setMessage("⚠️ New device detected! Please check your email to verify this device.");
+      } else if (data.success) {
+        setMessage("✅ Magic link sent! Check your email (and spam folder).");
+      } else {
+        setMessage(data.error || "❌ Failed to send magic link. Please try again.");
+      }
+
       e.target.reset();
     } catch (error) {
-      console.error("Error sending magic link:", error);
-
-      if (error.code === "auth/invalid-email") {
-        setMessage("❌ Invalid email address");
-      } else if (error.code === "auth/unauthorized-continue-uri") {
-        setMessage("❌ Domain not authorized. Check Firebase Console.");
-      } else if (error.code === "auth/missing-continue-uri") {
-        setMessage("❌ Configuration error. Check actionCodeSettings.");
-      } else {
-        setMessage(`❌ Error: ${error.message}`);
-      }
+      console.error("Error:", error);
+      setMessage("❌ Network error. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -55,7 +75,6 @@ function App() {
 
   return (
     <Routes>
-      {/* 🔹 Default Login Page with Magic Link */}
       <Route
         path="/"
         element={
@@ -120,6 +139,8 @@ function App() {
                     border: "1px solid #ddd",
                     borderRadius: "5px",
                     backgroundColor: loading ? "#f9f9f9" : "white",
+                    boxSizing: "border-box",
+                    color: "#333",
                   }}
                 />
                 <button
@@ -136,6 +157,7 @@ function App() {
                     cursor: loading ? "not-allowed" : "pointer",
                     fontWeight: "bold",
                     transition: "background-color 0.3s",
+                    boxSizing: "border-box",
                   }}
                   onMouseEnter={(e) =>
                     !loading && (e.target.style.backgroundColor = "#45a049")
@@ -156,12 +178,22 @@ function App() {
                     borderRadius: "5px",
                     backgroundColor: message.includes("✅")
                       ? "#d4edda"
+                      : message.includes("⚠️")
+                      ? "#fff3cd"
                       : "#f8d7da",
-                    color: message.includes("✅") ? "#155724" : "#721c24",
+                    color: message.includes("✅")
+                      ? "#155724"
+                      : message.includes("⚠️")
+                      ? "#856404"
+                      : "#721c24",
                     textAlign: "center",
                     fontSize: "14px",
                     border: `1px solid ${
-                      message.includes("✅") ? "#c3e6cb" : "#f5c6cb"
+                      message.includes("✅")
+                        ? "#c3e6cb"
+                        : message.includes("⚠️")
+                        ? "#ffeaa7"
+                        : "#f5c6cb"
                     }`,
                   }}
                 >
@@ -196,10 +228,9 @@ function App() {
         }
       />
 
-      {/* 🔹 Other Routes */}
       <Route path="/register" element={<Register />} />
       <Route path="/login" element={<Login />} />
-      <Route path="/auth/verify" element={<VerifyMagicLink />} /> {/* ✅ ADDED: Handles /auth/verify?token=... */}
+      <Route path="/auth/verify" element={<VerifyMagicLink />} />
       <Route path="/verify-magic-link" element={<VerifyMagicLink />} />
       <Route path="/auth/verify-device" element={<VerifyDevice />} />
       <Route path="/dashboard" element={<Dashboard />} />
