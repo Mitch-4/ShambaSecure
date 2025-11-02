@@ -26,8 +26,14 @@ auth_bp = Blueprint('auth', __name__)
 # In-memory token storage (use Redis in production)
 login_tokens = {}
 device_verification_tokens = {}
-TOKEN_EXPIRY_MINUTES = 15
-DEVICE_VERIFICATION_EXPIRY_MINUTES = 30
+TOKEN_EXPIRY_MINUTES = 5
+DEVICE_VERIFICATION_EXPIRY_MINUTES = 10
+
+# In-memory rate limiting (use Redis in production)
+rate_limit = {}
+RATE_LIMIT_REQUESTS = 3          # max 3 requests per window
+RATE_LIMIT_WINDOW_SECONDS = 60   # 1-minute window
+
 
 # ✅ HTTPS Enforcement (set to True in production)
 ENFORCE_HTTPS = os.getenv('ENFORCE_HTTPS', 'False').lower() == 'true'
@@ -274,6 +280,8 @@ def send_magic_link():
 @auth_bp.route('/verify-device', methods=['GET', 'POST'])  # ✅ Accept both GET and POST
 def verify_device():
     """Verify new device and send magic link"""
+
+
     # Check HTTPS enforcement
     https_redirect = enforce_https()
     if https_redirect:
@@ -361,11 +369,30 @@ def verify_device():
 @auth_bp.route('/verify-token', methods=['GET', 'POST'])  # ✅ Accept both GET and POST
 def verify_token():
     """Verify magic link token and return Firebase custom token"""
+
     # Check HTTPS enforcement
     https_redirect = enforce_https()
     if https_redirect:
         return https_redirect
     
+    # 🛡️ Rate limiting check
+    ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
+    current_time = time.time()
+    requests_list = rate_limit.get(ip_address, [])
+
+    # Remove old entries (older than window)
+    requests_list = [t for t in requests_list if current_time - t < RATE_LIMIT_WINDOW_SECONDS]
+
+    if len(requests_list) >= RATE_LIMIT_REQUESTS:
+        return jsonify({
+            'success': False,
+            'error': 'Too many requests. Please wait a minute before trying again.'
+        }), 429
+    
+    # Record this attempt
+    requests_list.append(current_time)
+    rate_limit[ip_address] = requests_list
+
     try:
         # ✅ Get token from either POST body or GET query params
         if request.method == 'POST':
@@ -373,7 +400,17 @@ def verify_token():
             token = data.get('token') if data else None
         else:  # GET request from email link
             token = request.args.get('token')
-        
+
+        # --- DEBUG PRINTS ---
+        print("🔹 Token received from request:", token)
+        print("🔹 Current tokens in memory:", list(login_tokens.keys()))
+
+        if token in login_tokens:
+           print("🔹 Token expires at:", datetime.fromtimestamp(login_tokens[token]['expires_at']))
+           print("🔹 Expected device fingerprint:", login_tokens[token]['device_fingerprint'])
+        # --------------------
+
+
         if not token:
             return jsonify({
                 'success': False,
@@ -400,11 +437,31 @@ def verify_token():
         
         # Verify device fingerprint matches
         current_device_info = get_device_fingerprint(request)
-        if current_device_info['fingerprint'] != token_data['device_fingerprint']:
-            return jsonify({
-                'success': False,
-                'error': 'Device mismatch. Please use the device that requested the login link.'
-            }), 403
+        device_mismatch = current_device_info['fingerprint'] != token_data['device_fingerprint']
+
+        # ✅ Get user data before using it
+        db = get_firestore()
+        user_doc = db.collection('users').document(token_data['uid']).get()
+        user_data = user_doc.to_dict() if user_doc.exists else {}
+
+         # ✅ Add device to trusted devices
+        add_trusted_device(token_data['uid'], get_device_fingerprint(request))
+
+
+        # 🚨 Security alert: Notify user of login from new or unrecognized device
+        if device_mismatch:
+            try:
+                send_new_device_alert_email(
+                    token_data['email'],
+                    user_data.get('fullName', 'User'),
+                    current_device_info
+                )
+                print(f"⚠️ Security alert sent: New device login detected for {token_data['email']}")
+            except Exception as alert_error:
+                print(f"⚠️ Failed to send new device alert: {str(alert_error)}")
+
+
+         
         
         # Create custom Firebase token
         custom_token = create_custom_token(token_data['uid'])
@@ -412,10 +469,7 @@ def verify_token():
         # Delete used token (one-time use)
         del login_tokens[token]
         
-        # Get user data
-        db = get_firestore()
-        user_doc = db.collection('users').document(token_data['uid']).get()
-        user_data = user_doc.to_dict() if user_doc.exists else {}
+        
         
         # Log login activity
         login_activity = {
@@ -438,16 +492,18 @@ def verify_token():
         print(f"✅ User authenticated: {token_data['email']}")
         
         return jsonify({
-            'success': True,
-            'message': 'Authentication successful',
-            'customToken': custom_token,
-            'user': {
-                'uid': user_data.get('uid'),
-                'email': user_data.get('email'),
-                'fullName': user_data.get('fullName'),
-                'role': user_data.get('role', 'farmer')
-            }
-        }), 200
+    'success': True,
+    'message': 'Authentication successful',
+    'customToken': custom_token,
+    'user': {
+        'uid': user_data.get('uid'),
+        'email': user_data.get('email'),
+        'fullName': user_data.get('fullName'),
+        'role': user_data.get('role', 'farmer')
+    },
+    'warning': 'device_mismatch' if device_mismatch else None
+}), 200
+
         
     except Exception as e:
         print(f"❌ Token verification error: {str(e)}")
