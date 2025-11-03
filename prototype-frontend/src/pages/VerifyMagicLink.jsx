@@ -22,42 +22,58 @@ export default function VerifyMagicLink() {
       }
 
       try {
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://127.0.0.1:5000";
-        
+        const backendUrl =
+          import.meta.env.VITE_BACKEND_URL || "http://127.0.0.1:5000";
+
         // ✅ Verify token with backend
         const response = await axios.post(
           `${backendUrl}/api/auth/verify-token`,
           { token },
-          {
-            headers: { "Content-Type": "application/json" }
-          }
+          { headers: { "Content-Type": "application/json" } }
         );
 
-        if (response.data.success) {
-          const { customToken, user } = response.data;
-          
+        const { success, customToken, user, warning, error } = response.data;
+
+        if (success) {
           // ✅ Sign in to Firebase with custom token
           await signInWithCustomToken(auth, customToken);
-          
+
           // ✅ Store user data in localStorage
           localStorage.setItem("user", JSON.stringify(user));
-          
+
+          // ⚠️ If backend flagged device mismatch, show warning but still log in
+          if (warning === "device_mismatch") {
+            setMessage(
+              "⚠️ You’re logging in from a new device. Please confirm this is you."
+            );
+            setIsError(false);
+            setTimeout(() => {
+              navigate("/dashboard");
+            }, 2500);
+            return;
+          }
+
+          // ✅ Normal success case
           setMessage("✅ Login successful! Redirecting to dashboard...");
           setIsError(false);
-          
-          // Redirect to dashboard
+
           setTimeout(() => {
             navigate("/dashboard");
           }, 1500);
+        } else {
+          // ❌ Backend returned failure
+          setMessage(`❌ ${error || "Invalid or expired link."}`);
+          setIsError(true);
+          setTimeout(() => navigate("/login"), 5000);
         }
       } catch (err) {
         console.error("Verification error:", err);
-        
-        const errorMessage = err.response?.data?.error || "Invalid or expired link. Please request a new one.";
+        const errorMessage =
+          err.response?.data?.error ||
+          "Invalid or expired link. Please request a new one.";
         setMessage(`❌ ${errorMessage}`);
         setIsError(true);
-        
-        // Redirect to login after 5 seconds
+
         setTimeout(() => {
           navigate("/login");
         }, 5000);
@@ -91,7 +107,7 @@ export default function VerifyMagicLink() {
           textAlign: "center",
         }}
       >
-        {/* Loading spinner or icon */}
+        {/* Loading spinner */}
         {!isError && (
           <div
             style={{
@@ -105,7 +121,7 @@ export default function VerifyMagicLink() {
             }}
           />
         )}
-        
+
         {isError && (
           <div
             style={{
@@ -152,15 +168,18 @@ export default function VerifyMagicLink() {
               cursor: "pointer",
               fontWeight: "600",
             }}
-            onMouseEnter={(e) => (e.target.style.backgroundColor = "#45a049")}
-            onMouseLeave={(e) => (e.target.style.backgroundColor = "#4CAF50")}
+            onMouseEnter={(e) =>
+              (e.target.style.backgroundColor = "#45a049")
+            }
+            onMouseLeave={(e) =>
+              (e.target.style.backgroundColor = "#4CAF50")
+            }
           >
             Request New Link
           </button>
         )}
       </div>
 
-      {/* CSS animation for spinner */}
       <style>{`
         @keyframes spin {
           0% { transform: rotate(0deg); }

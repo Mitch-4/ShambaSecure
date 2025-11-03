@@ -35,7 +35,7 @@ export default function VerifyDevice() {
           setMessage("✅ Device verified! Magic link sent to your email. Please check your inbox.");
           setIsError(false);
           
-          // Redirect to login after 3 seconds
+          // Redirect to login after 10 seconds
           setTimeout(() => {
             navigate("/login", { 
               state: { 
@@ -51,7 +51,7 @@ export default function VerifyDevice() {
         setMessage(`❌ ${errorMessage}`);
         setIsError(true);
         
-        // Redirect to login after 5 seconds on error
+        // Redirect to login after 10 seconds on error
         setTimeout(() => {
           navigate("/login");
         }, 5000);
