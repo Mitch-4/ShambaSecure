@@ -1,6 +1,3 @@
-
----
-
 # 🌿 ShambaSecure — Magic Link Authentication System
 
 ## 🔍 Overview
@@ -8,8 +5,6 @@ ShambaSecure is a secure authentication module built using **Flask** (Python) an
 It implements a **passwordless login system** using **Magic Links**, allowing users to log in securely through their email without traditional passwords.  
 
 This project is part of the **ShambaSecure Farmer Dashboard**, designed to enhance account security and accessibility for rural farmers.
-
----
 
 ## 🧠 Key Features
 - 🔐 Passwordless login via Firebase Magic Links  
