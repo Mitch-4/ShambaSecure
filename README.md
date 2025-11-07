@@ -41,40 +41,29 @@ cd ShambaSecure/backend
 
 ### 2️⃣ Create a virtual environment
 python -m venv venv
-venv\Scripts\activate  # On Windows
-source venv/bin/activate  # On Mac/Linux
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+venv\Scripts\Activate.ps1  # On Windows
+source venv/bin/Activate.ps1 # On Mac/Linux
 
 ---
 
-### 3️⃣ Install depemdencies
+### 3️⃣ Install dependencies
 pip install -r requirements.txt
 
 ---
 
-### 4️⃣ Set up Firebase Admin SDK
-Go to Firebase Console
-Create a project → Enable Email Link (passwordless sign-in) under Authentication
-Generate a service account key (JSON) and place it in the backend directory
-Rename it to firebase_key.json
-
----
-
-### 5️⃣Create a .env file
-FIREBASE_CREDENTIALS=firebase_key.json
-FLASK_ENV=development
-SECRET_KEY=your_secret_key
-
----
-
-### 6️⃣ Run the Flask app
+### 4️⃣ Run the Flask app
 flask run or python app.py
 
 ---
 
-### 7️⃣Once the backend is running locally, the frontend can now connect to it.
+### 5️⃣Once the backend is running locally, the frontend can now connect to it.
 Open a new terminal tab/window
 Go to the frontend (cd prototype-frontend)
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+npm install
 Start it with (npm run dev)
+Then click the link- local: (link)
 
 
 ---
